@@ -216,4 +216,5 @@ test("skill documents credential gates and helper login flow", () => {
   assert.match(skill, /THINKFEEL_PERSONA_ID/);
   assert.match(skill, /OPENAI_API_KEY/);
   assert.match(helper, /loginUrl\.searchParams\.set\('source', 'codex'\)/);
+  assert.match(helper, /form\.get\('error'\)/);
 });

@@ -449,6 +449,9 @@ function startLoginCallbackServer(state) {
         const form = new URLSearchParams(await readRequestBody(request));
         if (form.get('state') !== state) throw new Error('Invalid login callback state.');
 
+        const loginError = form.get('error');
+        if (loginError) throw new Error(loginError);
+
         const encryptedApiKeyRaw = form.get('encrypted_api_key');
         if (!encryptedApiKeyRaw) throw new Error('Missing encrypted API key.');
 
