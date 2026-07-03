@@ -1,0 +1,6 @@
+interface:
+  display_name: ThinkFeel Playground API Key
+  short_description: Create and configure Playground API keys safely.
+  default_prompt: Create a Playground API key for this project
+policy:
+  allow_implicit_invocation: false
