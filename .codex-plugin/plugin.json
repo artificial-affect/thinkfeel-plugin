@@ -13,6 +13,9 @@
     "developerName": "ThinkFeel",
     "category": "Developer Tools",
     "capabilities": ["Interactive", "Read", "Write"],
+    "composerIcon": "./assets/logo.png",
+    "logo": "./assets/logo.png",
+    "logoDark": "./assets/logo.png",
     "defaultPrompt": [
       "Create a Playground API key for this project",
       "Configure this ThinkFeel project for local development"
