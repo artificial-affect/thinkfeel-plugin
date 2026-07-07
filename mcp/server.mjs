@@ -1,8 +1,8 @@
 import path from 'node:path';
 import readline from 'node:readline';
 
+const SERVER_NAME = 'ThinkFeel Plugin MCP';
 const DEFAULT_ENV_NAME = 'THINKFEEL_API_KEY';
-const SERVER_NAME = 'ThinkFeel Codex Dev MCP';
 const TOOL_NAME = 'confirm_thinkfeel_api_key_local_destination';
 
 const ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
@@ -54,7 +54,7 @@ async function handleToolCall(id, params) {
   const { workspace, target: recommendedTarget } = resolveTarget(args.workspacePath, args.targetPath);
   const elicitation = await request('elicitation/create', {
     mode: 'form',
-    message: `Choose where ThinkFeel Codex Dev Plugin should save the new API key as ${envName}.`,
+    message: `Choose where ThinkFeel Plugin should save the new API key as ${envName}.`,
     requestedSchema: {
       type: 'object',
       required: ['targetPath'],
@@ -88,18 +88,15 @@ async function handleRequest(message) {
   if (method === 'initialize') {
     sendResult(id, {
       capabilities: { tools: {} },
-      serverInfo: { version: '0.1.1', name: SERVER_NAME },
+      serverInfo: { version: '0.2.0', name: SERVER_NAME },
       protocolVersion: params?.protocolVersion ?? '2025-11-25',
       instructions:
-        'Use confirm_thinkfeel_api_key_local_destination after the Playground key picker returns a key name and target ids. It asks the developer to confirm or edit the local env-file destination before a secret is created or written.',
+        'Use confirm_thinkfeel_api_key_local_destination before running the ThinkFeel helper login flow. It asks the developer to confirm or edit the local env-file destination before a secret is created or written.',
     });
     return;
   }
 
-  if (method === 'ping') {
-    sendResult(id, {});
-    return;
-  }
+  if (method === 'ping') return sendResult(id, {});
 
   if (method === 'tools/list') {
     sendResult(id, {
@@ -109,7 +106,7 @@ async function handleRequest(message) {
           title: 'Confirm Playground API Key Local Destination',
           annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false, destructiveHint: false },
           description:
-            'Ask the developer to confirm or edit the local env-file destination for a new Playground API key. Call this after the Playground key picker returns the confirmed key name and target ids, and proceed only when it returns approved.',
+            'Ask the developer to confirm or edit the local env-file destination for a new Playground API key. Call this before running the helper login flow, and proceed only when it returns approved.',
           inputSchema: {
             type: 'object',
             required: ['workspacePath', 'targetPath'],

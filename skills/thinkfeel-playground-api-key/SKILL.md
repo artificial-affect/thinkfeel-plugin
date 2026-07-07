@@ -1,13 +1,13 @@
 ---
 name: thinkfeel-playground-api-key
-description: 'Use when Codex is asked to configure a ThinkFeel project or Playground API key. Treat this as the credential gate: inspect safely, ask reuse-vs-new before API work, and never expose plaintext.'
+description: 'Use when an agent is asked to configure a ThinkFeel project or Playground API key. Treat this as the credential gate: inspect safely, ask reuse-vs-new before API work, and never expose plaintext.'
 ---
 
 # ThinkFeel Playground API Key
 
-Use this skill only in Codex local/app sessions. Keep plaintext out of normal tool output, and write secrets only to a confirmed local destination.
+Use this skill only in local agent sessions. Keep plaintext out of normal tool output, and write secrets only to a confirmed local destination.
 
-The plugin is a richer Codex-native wrapper around the general ThinkFeel CLI/SKILL flow. Prefer the native ThinkFeel env names unless the project explicitly uses the OpenAI-compatible completions endpoint.
+The plugin is a richer local-agent wrapper around the general ThinkFeel CLI/SKILL flow. Prefer the native ThinkFeel env names unless the project explicitly uses the OpenAI-compatible completions endpoint.
 
 ## When To Use
 
@@ -16,8 +16,8 @@ Use this skill as the credential gate for ThinkFeel or Playground API-backed wor
 Use it when:
 
 - The user asks for a Playground or ThinkFeel API key.
-- Codex will build, run, test, debug, or configure a ThinkFeel project that calls the Playground API.
-- Codex needs to decide whether to reuse an existing key or create a new key before API work.
+- The agent will build, run, test, debug, or configure a ThinkFeel project that calls the Playground API.
+- The agent needs to decide whether to reuse an existing key or create a new key before API work.
 - The user explicitly needs `OPENAI_API_KEY` for an OpenAI-compatible `/api/v1/completions` client.
 
 Do not use it when:
@@ -58,7 +58,7 @@ Finding an existing key is not permission to proceed. It only changes the questi
    - use `OPENAI_API_KEY` only for OpenAI-compatible `/api/v1/completions` clients or explicit user request
 2. Ask the credential decision question and stop until the user answers.
 3. When creation is chosen, confirm the destination file/env var before writing:
-   - use `tool_search` to load `confirm_thinkfeel_api_key_local_destination`
+   - use the installed MCP tool `confirm_thinkfeel_api_key_local_destination`; in Codex, load it with `tool_search` if needed
    - call it with the absolute workspace root, the recommended env-file target, and `THINKFEEL_API_KEY`
    - if it returns `approved`, use its returned `targetPath` exactly
    - if unavailable, ask exactly one short destination question and stop
@@ -70,7 +70,7 @@ Finding an existing key is not permission to proceed. It only changes the questi
 Use the helper by absolute path. `prepare` creates the temporary private key file plus a request JSON containing only the public JWK and requested key name:
 
 ```bash
-node "<plugin root>/scripts/thinkfeel-playground-api-key.mjs" prepare --name "Codex"
+node "<plugin root>/scripts/thinkfeel-playground-api-key.mjs" prepare --name "ThinkFeel Plugin"
 ```
 
 After the connector returns `encrypted_api_key.ciphertext`, decrypt and write the key locally:
@@ -94,9 +94,12 @@ node "<plugin root>/scripts/thinkfeel-playground-api-key.mjs" login \
   --target "<confirmed env file path>" \
   --workspace "<repo root>" \
   --env-name THINKFEEL_API_KEY \
+  --source codex \
   --persona-id "<persona_id>" \
   --name "Codex"
 ```
+
+Use `--source codex` in Codex and `--source claude_code` in Claude Code.
 
 The login command opens the Playground browser sign-in flow, asks the user to approve key creation, receives only encrypted ciphertext from the browser, decrypts locally, and writes the env file without printing plaintext.
 

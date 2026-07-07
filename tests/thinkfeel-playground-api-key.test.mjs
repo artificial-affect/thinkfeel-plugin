@@ -12,8 +12,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.resolve(__dirname, '../scripts/thinkfeel-playground-api-key.mjs');
 
 const SKILL = path.resolve(__dirname, '../skills/thinkfeel-playground-api-key/SKILL.md');
-const PLUGIN_MANIFEST = path.resolve(__dirname, '../.codex-plugin/plugin.json');
-const MCP_MANIFEST = path.resolve(__dirname, '../.mcp.json');
+const CODEX_PLUGIN_MANIFEST = path.resolve(__dirname, '../.codex-plugin/plugin.json');
+const CLAUDE_PLUGIN_MANIFEST = path.resolve(__dirname, '../.claude-plugin/plugin.json');
+const CLAUDE_MARKETPLACE = path.resolve(__dirname, '../.claude-plugin/marketplace.json');
+const CODEX_MCP_MANIFEST = path.resolve(__dirname, '../codex/mcp.json');
+const CLAUDE_MCP_MANIFEST = path.resolve(__dirname, '../claude/mcp.json');
 
 const MCP_SERVER = path.resolve(__dirname, '../mcp/server.mjs');
 const TEST_API_KEY = ['tf', 'test', 'placeholder', 'value'].join('_');
@@ -21,6 +24,14 @@ const TEST_PERSONA_ID = 'persona-00000000-0000-0000-0000-000000000001';
 
 function runScript(args) {
   return execFileSync(process.execPath, [SCRIPT, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+}
+
+function runScriptRaw(args) {
+  return spawnSync(process.execPath, [SCRIPT, ...args], {
+    timeout: 5_000,
+    encoding: 'utf8',
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
 }
 
 function runMcpServer(requests) {
@@ -111,8 +122,9 @@ test('decrypt writes only safe metadata to stdout', async () => {
 });
 
 test('plugin registers the local destination confirmation MCP tool', () => {
-  const pluginManifest = JSON.parse(fs.readFileSync(PLUGIN_MANIFEST, 'utf8'));
-  const manifest = JSON.parse(fs.readFileSync(MCP_MANIFEST, 'utf8'));
+  const pluginManifest = JSON.parse(fs.readFileSync(CODEX_PLUGIN_MANIFEST, 'utf8'));
+  const codexMcpManifest = JSON.parse(fs.readFileSync(CODEX_MCP_MANIFEST, 'utf8'));
+  const claudeMcpManifest = JSON.parse(fs.readFileSync(CLAUDE_MCP_MANIFEST, 'utf8'));
   const responses = runMcpServer([
     {
       id: 1,
@@ -121,7 +133,7 @@ test('plugin registers the local destination confirmation MCP tool', () => {
       params: {
         capabilities: {},
         protocolVersion: '2025-11-25',
-        clientInfo: { name: 'thinkfeel-codex-dev-test', version: '0.1.1' },
+        clientInfo: { name: 'thinkfeel-plugin-test', version: '0.2.0' },
       },
     },
     {
@@ -132,9 +144,13 @@ test('plugin registers the local destination confirmation MCP tool', () => {
     },
   ]);
 
-  assert.equal(pluginManifest.mcpServers, './.mcp.json');
-  assert.deepEqual(manifest.mcpServers['thinkfeel-api-key-local-confirmation'].args, ['./mcp/server.mjs']);
-  assert.equal(responses[0].result.serverInfo.name, 'ThinkFeel Codex Dev MCP');
+  assert.equal(pluginManifest.name, 'thinkfeel-plugin');
+  assert.equal(pluginManifest.mcpServers, './codex/mcp.json');
+  assert.deepEqual(codexMcpManifest.mcpServers['thinkfeel-api-key-local-confirmation'].args, ['./mcp/server.mjs']);
+  assert.deepEqual(claudeMcpManifest.mcpServers['thinkfeel-api-key-local-confirmation'].args, [
+    '${CLAUDE_PLUGIN_ROOT}/mcp/server.mjs',
+  ]);
+  assert.equal(responses[0].result.serverInfo.name, 'ThinkFeel Plugin MCP');
   assert.deepEqual(
     responses[1].result.tools.map(tool => tool.name),
     ['confirm_thinkfeel_api_key_local_destination']
@@ -152,7 +168,7 @@ test('local destination confirmation accepts an override inside the workspace', 
         params: {
           capabilities: {},
           protocolVersion: '2025-11-25',
-          clientInfo: { name: 'thinkfeel-codex-dev-test', version: '0.1.1' },
+          clientInfo: { name: 'thinkfeel-plugin-test', version: '0.2.0' },
         },
       },
       {
@@ -180,10 +196,22 @@ test('local destination confirmation accepts an override inside the workspace', 
   }
 });
 
+test('login rejects unknown agent source values before starting setup', () => {
+  const result = runScriptRaw(['login', '--target', '.env.local', '--source', 'unknown_agent']);
+
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /Invalid --source\. Use codex or claude_code\./);
+});
+
 test('skill documents credential gates and helper login flow', () => {
   const skill = fs.readFileSync(SKILL, 'utf8');
   const helper = fs.readFileSync(SCRIPT, 'utf8');
+  const claudePluginManifest = JSON.parse(fs.readFileSync(CLAUDE_PLUGIN_MANIFEST, 'utf8'));
+  const claudeMarketplace = JSON.parse(fs.readFileSync(CLAUDE_MARKETPLACE, 'utf8'));
 
+  assert.equal(claudePluginManifest.name, 'thinkfeel-plugin');
+  assert.equal(claudePluginManifest.mcpServers, './claude/mcp.json');
+  assert.equal(claudeMarketplace.plugins[0].name, 'thinkfeel-plugin');
   assert.match(skill, /Treat this as the credential gate/);
   assert.match(skill, /Never inspect credentials with commands that can print secret values/);
   assert.match(skill, /confirm_thinkfeel_api_key_local_destination/);
@@ -192,6 +220,8 @@ test('skill documents credential gates and helper login flow', () => {
   assert.match(skill, /THINKFEEL_API_KEY/);
   assert.match(skill, /THINKFEEL_PERSONA_ID/);
   assert.match(skill, /OPENAI_API_KEY/);
-  assert.match(helper, /loginUrl\.searchParams\.set\('source', 'codex'\)/);
+  assert.match(helper, /LOGIN_SOURCE_VALUES = new Set\(\['codex', 'claude_code'\]\)/);
+  assert.match(helper, /LOGIN_SOURCE_DISPLAY_NAMES = \{ claude_code: 'Claude Code', codex: 'Codex' \}/);
+  assert.match(helper, /loginUrl\.searchParams\.set\('source', source\)/);
   assert.match(helper, /form\.get\('error'\)/);
 });

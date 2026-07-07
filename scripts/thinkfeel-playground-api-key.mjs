@@ -14,6 +14,10 @@ const DEFAULT_ENV_NAME = 'THINKFEEL_API_KEY';
 const PERSONA_ENV_NAME = 'THINKFEEL_PERSONA_ID';
 const DEFAULT_BASE_URL = 'https://playground.curvelabs.org';
 
+const DEFAULT_LOGIN_SOURCE = 'codex';
+const LOGIN_SOURCE_VALUES = new Set(['codex', 'claude_code']);
+const LOGIN_SOURCE_DISPLAY_NAMES = { claude_code: 'Claude Code', codex: 'Codex' };
+
 const BASE64URL_PATTERN = /^[A-Za-z0-9_-]+$/;
 const SAFE_API_KEY_PATTERN = /^(sk-[A-Za-z0-9_-]+|tf[_-][A-Za-z0-9_-]+)$/;
 
@@ -26,6 +30,7 @@ const OPTIONS_WITH_VALUES = new Set([
   'name',
   'persona-id',
   'private-key',
+  'source',
   'target',
   'workspace',
 ]);
@@ -36,7 +41,7 @@ const OPTIONS_ALLOWING_DASH_VALUES = new Set(['ciphertext']);
 function usage() {
   return `Usage:
   thinkfeel-playground-api-key.mjs prepare [--name <key name>] [--dir <state dir>]
-  thinkfeel-playground-api-key.mjs login --target <path> [--workspace <repo root>] [--env-name THINKFEEL_API_KEY] [--persona-id <id>] [--name Codex] [--base-url <url>]
+  thinkfeel-playground-api-key.mjs login --target <path> [--workspace <repo root>] [--env-name THINKFEEL_API_KEY] [--persona-id <id>] [--name Codex] [--source codex|claude_code] [--base-url <url>]
   thinkfeel-playground-api-key.mjs decrypt --private-key <path> --target <path> (--ciphertext <value> | --encrypted-result <path>) [--env-name THINKFEEL_API_KEY] [--persona-id <id>] [--workspace <repo root>]
 
 Commands:
@@ -79,6 +84,20 @@ function parseArgs(argv) {
 
 const printJson = value => process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 const base64urlJson = value => Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
+
+function getLoginSource(args) {
+  if (typeof args.source !== 'string' || !args.source.trim()) return DEFAULT_LOGIN_SOURCE;
+
+  const source = args.source.trim().toLowerCase();
+  if (LOGIN_SOURCE_VALUES.has(source)) return source;
+
+  fail('Invalid --source. Use codex or claude_code.');
+}
+
+function getLoginName(args, source) {
+  if (typeof args.name === 'string' && args.name.trim()) return args.name.trim();
+  return LOGIN_SOURCE_DISPLAY_NAMES[source] ?? 'ThinkFeel Plugin';
+}
 
 function ensureUsableNodeCrypto() {
   if (subtle == null) fail('This helper requires Node.js WebCrypto support.');
@@ -264,7 +283,7 @@ async function generateRecipientKeyPair() {
 }
 
 async function prepare(args) {
-  const name = typeof args.name === 'string' && args.name.trim() ? args.name.trim() : 'Codex';
+  const name = typeof args.name === 'string' && args.name.trim() ? args.name.trim() : 'ThinkFeel Plugin';
   const outputDir = resolveOutputDir(args.dir);
 
   const privateKeyPath = path.join(outputDir, 'recipient-private-key.jwk.json');
@@ -536,7 +555,8 @@ async function decrypt(args) {
 
 async function login(args) {
   if (typeof args.target !== 'string') fail('Missing --target.');
-  const name = typeof args.name === 'string' && args.name.trim() ? args.name.trim() : 'Codex';
+  const source = getLoginSource(args);
+  const name = getLoginName(args, source);
 
   const envName =
     typeof args['env-name'] === 'string' && args['env-name'].trim() ? args['env-name'].trim() : DEFAULT_ENV_NAME;
@@ -557,7 +577,7 @@ async function login(args) {
   loginUrl.searchParams.set('state', state);
   loginUrl.searchParams.set('name', name);
 
-  loginUrl.searchParams.set('source', 'codex');
+  loginUrl.searchParams.set('source', source);
   loginUrl.searchParams.set('redirect_uri', redirectUri);
   loginUrl.searchParams.set('recipient_public_key_jwk', base64urlJson(keyPair.publicJwk));
 
@@ -576,7 +596,7 @@ async function login(args) {
     ...writeResult,
     persona_env_name: personaWriteResult?.env_name,
     persona_target_path: personaWriteResult?.target_path,
-    source: 'codex',
+    source,
     wrote_plaintext_to_stdout: false,
   });
 }

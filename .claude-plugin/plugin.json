@@ -1,0 +1,11 @@
+{
+  "license": "Apache-2.0",
+  "version": "0.2.0",
+  "skills": "./skills/",
+  "name": "thinkfeel-plugin",
+  "author": { "name": "ThinkFeel" },
+  "displayName": "ThinkFeel Plugin",
+  "mcpServers": "./claude/mcp.json",
+  "description": "Developer setup automation for ThinkFeel projects.",
+  "keywords": ["thinkfeel", "developer-tools", "api-key", "playground"]
+}
