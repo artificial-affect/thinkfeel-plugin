@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import http from 'node:http';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import { webcrypto, randomUUID } from 'node:crypto';
 
@@ -13,6 +14,8 @@ const ENCRYPTED_API_KEY_VERSION = 1;
 const DEFAULT_ENV_NAME = 'THINKFEEL_API_KEY';
 const PERSONA_ENV_NAME = 'THINKFEEL_PERSONA_ID';
 const DEFAULT_BASE_URL = 'https://playground.curvelabs.org';
+const SCRIPT_DIR = path.dirname(fileURLToPath(import.meta.url));
+const LOCAL_LOGO_PATH = path.resolve(SCRIPT_DIR, '../assets/curve-labs-logo.png');
 
 const DEFAULT_LOGIN_SOURCE = 'codex';
 const LOGIN_SOURCE_VALUES = new Set(['codex', 'claude_code']);
@@ -84,6 +87,268 @@ function parseArgs(argv) {
 
 const printJson = value => process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
 const base64urlJson = value => Buffer.from(JSON.stringify(value), 'utf8').toString('base64url');
+
+const loginHtmlStyles = `
+      :root {
+        --background: 0 0% 100%;
+        --foreground: 240 10% 3.9%;
+        --card: 0 0% 100%;
+        --card-foreground: 240 10% 3.9%;
+        --primary: 240 5.9% 10%;
+        --primary-foreground: 0 0% 98%;
+        --muted: 240 4.8% 95.9%;
+        --muted-foreground: 240 3.8% 46.1%;
+        --accent: 240 4.8% 95.9%;
+        --accent-foreground: 240 5.9% 10%;
+        --border: 240 5.9% 90%;
+        --input: 240 5.9% 90%;
+        --ring: 240 10% 3.9%;
+        color-scheme: light;
+      }
+      * { box-sizing: border-box; border-color: hsl(var(--border)); }
+      body {
+        min-height: 100dvh;
+        margin: 0;
+        background: #fff;
+        color: hsl(var(--foreground));
+        font-family: Arial, Helvetica, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+        line-height: 1.5;
+      }
+      .auth-logo {
+        position: fixed;
+        left: 50%;
+        top: 2rem;
+        z-index: 51;
+        width: auto;
+        height: 1.25rem;
+        object-fit: contain;
+        margin: 0;
+        transform: translateX(-50%);
+      }
+      .auth-warning {
+        position: fixed;
+        left: 50%;
+        bottom: 2rem;
+        z-index: 51;
+        width: min(calc(100% - 2rem), 36rem);
+        margin: 0;
+        transform: translateX(-50%);
+        color: hsl(var(--muted-foreground));
+        font-size: 0.75rem;
+        line-height: 1rem;
+        text-align: center;
+      }
+      .auth-panel {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        z-index: 50;
+        display: grid;
+        width: 100%;
+        transform: translate(-50%, -50%);
+        gap: 1rem;
+        border-color: hsl(var(--border));
+        border-style: solid;
+        border-width: 1px 0;
+        background: hsl(var(--background));
+        padding: calc(1.5rem - 1px);
+        transition-duration: 200ms;
+      }
+      .auth-close {
+        position: absolute;
+        right: calc(1rem - 1px);
+        top: calc(1rem - 1px);
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        opacity: 0.7;
+        outline: none;
+        padding: 0;
+        transition-property: opacity;
+        transition-duration: 150ms;
+      }
+      .auth-close:hover {
+        opacity: 1;
+      }
+      .auth-close:focus {
+        box-shadow: 0 0 0 2px hsl(var(--ring)), 0 0 0 4px hsl(var(--background));
+      }
+      .auth-close-icon {
+        width: 1rem;
+        height: 1rem;
+        display: block;
+        pointer-events: none;
+      }
+      .auth-sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border-width: 0;
+      }
+      .auth-header {
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        text-align: center;
+      }
+      .auth-title {
+        margin: 0;
+        color: hsl(var(--foreground));
+        font-size: 1.125rem;
+        font-weight: 600;
+        line-height: 1.75rem;
+        letter-spacing: -0.025em;
+      }
+      .auth-description {
+        margin: 0.375rem 0 0;
+        color: hsl(var(--muted-foreground));
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+      }
+      .auth-form {
+        margin: 0;
+        display: block;
+      }
+      .auth-field {
+        display: block;
+      }
+      .auth-form > * + * {
+        margin-top: 1rem;
+      }
+      .auth-field > * + * {
+        margin-top: 0.5rem;
+      }
+      .auth-label {
+        color: hsl(var(--foreground));
+        display: inline;
+        font-size: 0.875rem;
+        font-weight: 500;
+        line-height: 1;
+      }
+      .auth-input {
+        display: flex;
+        width: 100%;
+        height: 2.25rem;
+        border: 1px solid hsl(var(--input));
+        border-radius: 0;
+        background: transparent;
+        color: hsl(var(--foreground));
+        padding: 0.25rem 0.75rem;
+        font: inherit;
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+        box-shadow: 0 0 #0000, 0 0 #0000, 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        outline: none;
+        transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+        transition-duration: 150ms;
+      }
+      .auth-input::placeholder {
+        color: hsl(var(--muted-foreground));
+      }
+      .auth-input:focus-visible {
+        border-color: hsl(var(--ring));
+      }
+      .auth-input:disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+      .auth-actions {
+        display: flex;
+        flex-direction: column-reverse;
+      }
+      .auth-button {
+        outline: none;
+        white-space: nowrap;
+        transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+        transition-duration: 150ms;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        justify-content: center;
+        height: 2.25rem;
+        border: 0;
+        background: hsl(var(--primary));
+        color: hsl(var(--primary-foreground));
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+        padding: 0.5rem 1rem;
+        box-shadow: 0 0 #0000, 0 0 #0000, 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+      }
+      .auth-button:hover {
+        background: hsl(var(--primary) / 0.9);
+      }
+      .auth-button:focus-visible {
+        box-shadow: 0 0 0 1px hsl(var(--ring)), 0 0 0 5px hsl(var(--background)), 0 0 0 6px hsl(var(--ring)), 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+      }
+      @media (min-width: 640px) {
+        .auth-panel {
+          border-width: 1px;
+          max-width: 36rem;
+        }
+        .auth-header {
+          text-align: left;
+        }
+        .auth-actions {
+          flex-direction: row;
+          justify-content: flex-end;
+        }
+        .auth-actions > * + * {
+          margin-left: 0.5rem;
+        }
+      }`;
+
+function localLogoDataUrl() {
+  const logo = fs.readFileSync(LOCAL_LOGO_PATH);
+  return `data:image/png;base64,${logo.toString('base64')}`;
+}
+
+function localSuccessPage() {
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ThinkFeel Key Set-Up</title>
+    <style>${loginHtmlStyles}</style>
+  </head>
+  <body>
+    <img class="auth-logo" src="${localLogoDataUrl()}" alt="Curve Labs" />
+    <main class="auth-panel">
+      <button class="auth-close" type="button" aria-label="Close" onclick="window.close()">
+        <svg class="auth-close-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M18 6 6 18" />
+          <path d="m6 6 12 12" />
+        </svg>
+        <span class="auth-sr-only">Close</span>
+      </button>
+      <div class="auth-header">
+          <h1 class="auth-title">Create API key</h1>
+          <p class="auth-description">ThinkFeel key setup is complete.<br />You can close this tab.</p>
+        </div>
+      <div class="auth-form">
+        <div class="auth-field">
+          <label class="auth-label" for="displayName">Status 200</label>
+          <input class="auth-input" disabled id="displayName" name="name" value="Successfully completed." />
+        </div>
+        <div class="auth-actions">
+          <button class="auth-button" type="button" onclick="window.close()">Done</button>
+        </div>
+      </div>
+    </main>
+    <p class="auth-warning">Do not authenticate this request if you did not initiate it.</p>
+  </body>
+</html>`;
+}
 
 function getLoginSource(args) {
   if (typeof args.source !== 'string' || !args.source.trim()) return DEFAULT_LOGIN_SOURCE;
@@ -417,9 +682,7 @@ function startLoginCallbackServer(state) {
         if (!encryptedApiKeyRaw) throw new Error('Missing encrypted API key.');
 
         response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
-        response.end(
-          '<!doctype html><title>ThinkFeel Login</title><p>ThinkFeel key setup complete. You can close this tab.</p>'
-        );
+        response.end(localSuccessPage());
         server.close();
         resolveCallback(JSON.parse(encryptedApiKeyRaw));
       } catch (error) {

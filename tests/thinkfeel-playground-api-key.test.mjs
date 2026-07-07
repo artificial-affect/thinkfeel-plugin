@@ -12,6 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.resolve(__dirname, '../scripts/thinkfeel-playground-api-key.mjs');
 
 const SKILL = path.resolve(__dirname, '../skills/thinkfeel-playground-api-key/SKILL.md');
+const CURVE_LABS_LOGO = path.resolve(__dirname, '../assets/curve-labs-logo.png');
 const CODEX_PLUGIN_MANIFEST = path.resolve(__dirname, '../.codex-plugin/plugin.json');
 const CLAUDE_PLUGIN_MANIFEST = path.resolve(__dirname, '../.claude-plugin/plugin.json');
 const CLAUDE_MARKETPLACE = path.resolve(__dirname, '../.claude-plugin/marketplace.json');
@@ -224,4 +225,13 @@ test('skill documents credential gates and helper login flow', () => {
   assert.match(helper, /LOGIN_SOURCE_DISPLAY_NAMES = \{ claude_code: 'Claude Code', codex: 'Codex' \}/);
   assert.match(helper, /loginUrl\.searchParams\.set\('source', source\)/);
   assert.match(helper, /form\.get\('error'\)/);
+  assert.match(helper, /function localSuccessPage/);
+  assert.match(helper, /function localLogoDataUrl/);
+  assert.match(helper, /border-width: 1px 0/);
+  assert.match(helper, /border-width: 1px/);
+  assert.match(helper, /ThinkFeel key setup is complete\.<br \/>You can close this tab\./);
+  assert.match(helper, /Status 200/);
+  assert.match(helper, /value="Successfully completed\."/);
+  assert.match(helper, /onclick="window\.close\(\)">Done/);
+  assert.equal(fs.existsSync(CURVE_LABS_LOGO), true);
 });
