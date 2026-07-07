@@ -7,7 +7,7 @@ description: 'Use when an agent is asked to configure a ThinkFeel project or Pla
 
 Use this skill only in local agent sessions. Keep plaintext out of normal tool output, and write secrets only to a confirmed local destination.
 
-The plugin is a richer local-agent wrapper around the general ThinkFeel CLI/SKILL flow. Prefer the native ThinkFeel env names unless the project explicitly uses the OpenAI-compatible completions endpoint.
+The plugin does not call the npm `thinkfeel` CLI. It uses this plugin's local helper plus Playground browser login to write a confirmed workspace env file. Prefer the native ThinkFeel env names unless the project explicitly uses the OpenAI-compatible completions endpoint.
 
 ## When To Use
 
@@ -67,7 +67,7 @@ Finding an existing key is not permission to proceed. It only changes the questi
 
 ## Helper
 
-Use the helper by absolute path. `prepare` creates the temporary private key file plus a request JSON containing only the public JWK and requested key name:
+Use the plugin helper by absolute path. These commands are part of the plugin setup path, not the standalone `thinkfeel` CLI. `prepare` creates the temporary private key file plus a request JSON containing only the public JWK and requested key name:
 
 ```bash
 node "<plugin root>/scripts/thinkfeel-playground-api-key.mjs" prepare --name "ThinkFeel Plugin"
