@@ -50,7 +50,9 @@ Run `/reload-plugins` after changing plugin manifests, MCP config, or other non-
 
 ## API Key Setup Flow
 
-The plugin confirms a local env-file destination first, then runs the helper login flow. The helper opens Playground browser sign-in, asks the user to approve key creation, receives only encrypted ciphertext from the browser callback, decrypts locally, and writes `THINKFEEL_API_KEY` without printing plaintext. If the user provides a persona ID, it also writes `THINKFEEL_PERSONA_ID`.
+The plugin confirms a local env-file destination first, then runs its own helper login flow. It does not call the npm `thinkfeel` CLI or `thinkfeel login`. The helper opens Playground browser sign-in, asks the user to approve key creation, receives only encrypted ciphertext from the browser callback, decrypts locally, and writes `THINKFEEL_API_KEY` without printing plaintext. If the user provides a persona ID, it also writes `THINKFEEL_PERSONA_ID`.
+
+This shares the same Playground encrypted loopback login endpoint as `thinkfeel login`, but the local client is different: the plugin helper writes a project env file, while the standalone CLI saves a ThinkFeel profile.
 
 Use `OPENAI_API_KEY` only when configuring a project that explicitly uses the OpenAI-compatible `/api/v1/completions` endpoint or when the user asks for that env var.
 
