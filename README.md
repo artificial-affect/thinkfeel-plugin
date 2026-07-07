@@ -1,28 +1,49 @@
-# ThinkFeel Codex Dev Plugin
+# ThinkFeel Plugin
 
-Codex-facing developer setup automation for ThinkFeel projects.
+Developer setup automation for ThinkFeel projects, packaged for both Codex and Claude Code.
 
-## Install
+## Install in Codex
 
 Add the ThinkFeel marketplace source:
 
 ```bash
-codex plugin marketplace add artificial-affect/thinkfeel-codex-dev-plugin
-codex plugin add thinkfeel-codex-dev-plugin@thinkfeel
+codex plugin marketplace add artificial-affect/thinkfeel-plugin
+codex plugin add thinkfeel-plugin@thinkfeel
 ```
 
-Alternatively, open the Codex plugin directory, choose the `ThinkFeel` marketplace, and install `ThinkFeel Codex Dev Plugin`. Start a new Codex thread after installation so Codex loads the plugin's skill and MCP server.
+Alternatively, open the Codex plugin directory, choose the `ThinkFeel` marketplace, and install `ThinkFeel Plugin`. Start a new Codex thread after installation so Codex loads the plugin's skill and MCP server.
+
+## Install in Claude Code
+
+Add the ThinkFeel marketplace source:
+
+```bash
+/plugin marketplace add artificial-affect/thinkfeel-plugin
+/plugin install thinkfeel-plugin@thinkfeel
+```
+
+For local development, load the checkout directly:
+
+```bash
+claude --plugin-dir ./thinkfeel-plugin
+```
+
+Run `/reload-plugins` after changing plugin manifests, MCP config, or other non-skill files.
 
 ## Requirements
 
 - Node.js 20 or newer.
-- A Codex environment that can load local plugins, skills, and MCP servers.
+- Codex or Claude Code with plugin, skill, and MCP support.
 - A Playground account with access to create API keys.
 
 ## What Is Included
 
-- `.codex-plugin/plugin.json` declares the Codex plugin metadata and ThinkFeel-facing plugin brand.
-- `.mcp.json` and `mcp/server.mjs` provide an editable local destination confirmation form for API-key setup.
+- `.codex-plugin/plugin.json` declares the Codex plugin metadata.
+- `.claude-plugin/plugin.json` declares the Claude Code plugin metadata.
+- `.agents/plugins/marketplace.json` publishes the Codex marketplace entry.
+- `.claude-plugin/marketplace.json` publishes the Claude Code marketplace entry.
+- `codex/mcp.json` and `claude/mcp.json` register the same local destination confirmation MCP server with host-specific path handling.
+- `mcp/server.mjs` provides an editable local destination confirmation form for API-key setup.
 - `skills/thinkfeel-playground-api-key/` defines the secure credential gate for Playground API-key setup.
 - `scripts/thinkfeel-playground-api-key.mjs` prepares a public encryption request and writes a decrypted key to a confirmed local env file without printing plaintext.
 - `tests/thinkfeel-playground-api-key.test.mjs` validates the helper, MCP tool, manifest wiring, and skill guardrails.
@@ -48,15 +69,18 @@ The helper then decrypts locally and writes only to the user-confirmed env file.
 
 ## Direct Helper Usage
 
-Codex normally invokes the skill and MCP confirmation flow for you. For local testing, run the helper directly after choosing an env-file destination inside the target workspace:
+Agents normally invoke the skill and MCP confirmation flow for you. For local testing, run the helper directly after choosing an env-file destination inside the target workspace:
 
 ```bash
 node scripts/thinkfeel-playground-api-key.mjs login \
   --target .env.local \
-  --workspace /path/to/your/project \
+  --workspace <project-root> \
   --env-name THINKFEEL_API_KEY \
-  --name Codex
+  --source codex \
+  --name "ThinkFeel Plugin"
 ```
+
+Use `--source codex` from Codex and `--source claude_code` from Claude Code.
 
 The helper opens Playground in a browser, completes normal sign-in, receives encrypted ciphertext on a loopback callback, decrypts it locally, and updates only the target env file. It never prints the plaintext key.
 
