@@ -1,7 +1,4 @@
 {
-  "name": "thinkfeel",
-  "owner": { "name": "ThinkFeel" },
-  "description": "ThinkFeel developer tooling for Claude Code.",
   "plugins": [
     {
       "source": "./",
@@ -12,5 +9,8 @@
       "description": "Developer setup automation for ThinkFeel projects.",
       "keywords": ["thinkfeel", "developer-tools", "api-key", "playground"]
     }
-  ]
+  ],
+  "name": "thinkfeel",
+  "owner": { "name": "ThinkFeel" },
+  "description": "ThinkFeel developer tooling for Claude Code."
 }

@@ -1,7 +1,7 @@
 {
-  "license": "Apache-2.0",
   "version": "0.2.0",
   "skills": "./skills/",
+  "license": "Apache-2.0",
   "name": "thinkfeel-plugin",
   "author": { "name": "ThinkFeel" },
   "displayName": "ThinkFeel Plugin",
