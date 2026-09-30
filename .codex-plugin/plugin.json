@@ -1,12 +1,9 @@
 {
-  "version": "0.2.0",
-  "skills": "./skills/",
-  "name": "thinkfeel-plugin",
-  "author": { "name": "ThinkFeel" },
-  "mcpServers": "./codex/mcp.json",
-  "description": "Developer setup automation for ThinkFeel projects.",
-  "keywords": ["thinkfeel", "developer-tools", "api-key", "playground"],
   "interface": {
+    "defaultPrompt": [
+      "Create a Playground API key for this project",
+      "Configure this ThinkFeel project for local development"
+    ],
     "logo": "./assets/logo.png",
     "developerName": "ThinkFeel",
     "category": "Developer Tools",
@@ -15,10 +12,13 @@
     "composerIcon": "./assets/logo.png",
     "capabilities": ["Interactive", "Read", "Write"],
     "shortDescription": "Set up ThinkFeel developer projects from Codex.",
-    "defaultPrompt": [
-      "Create a Playground API key for this project",
-      "Configure this ThinkFeel project for local development"
-    ],
     "longDescription": "Use ThinkFeel Plugin to configure local ThinkFeel projects, including secure Playground API key setup and ThinkFeel SDK environment variables."
-  }
+  },
+  "version": "0.2.0",
+  "skills": "./skills/",
+  "name": "thinkfeel-plugin",
+  "mcpServers": "./codex/mcp.json",
+  "author": { "name": "ThinkFeel" },
+  "description": "Developer setup automation for ThinkFeel projects.",
+  "keywords": ["thinkfeel", "developer-tools", "api-key", "playground"]
 }

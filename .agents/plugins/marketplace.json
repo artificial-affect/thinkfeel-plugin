@@ -1,6 +1,4 @@
 {
-  "name": "thinkfeel",
-  "interface": { "displayName": "ThinkFeel by Curve Labs" },
   "plugins": [
     {
       "name": "thinkfeel-plugin",
@@ -8,5 +6,7 @@
       "source": { "path": "./", "source": "local" },
       "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" }
     }
-  ]
+  ],
+  "name": "thinkfeel",
+  "interface": { "displayName": "ThinkFeel by Curve Labs" }
 }
