@@ -383,7 +383,6 @@ function chmodBestEffort(target, mode) {
   try {
     fs.chmodSync(target, mode);
   } catch {
-    // Best effort only; chmod is not available on every filesystem.
   }
 }
 
@@ -391,7 +390,6 @@ function unlinkBestEffort(target) {
   try {
     fs.unlinkSync(target);
   } catch {
-    // Best effort cleanup for temporary files.
   }
 }
 
