@@ -1,0 +1,22 @@
+# Local secrets and deployment credentials
+.env
+.env.*
+!.env.example
+!.env.*.example
+!.env.sample
+!.env.*.sample
+!.env.template
+!.env.*.template
+.vercel/
+*.key
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+credentials.json
+service-account*.json
+service_account*.json
+*.pem
+*.p8
+*.keystore
+*.jks
