@@ -129,13 +129,13 @@ test('plugin registers the local destination confirmation MCP tool', () => {
   const responses = runMcpServer([
     {
       id: 1,
-      jsonrpc: '2.0',
-      method: 'initialize',
       params: {
         capabilities: {},
         protocolVersion: '2025-11-25',
         clientInfo: { name: 'thinkfeel-plugin-test', version: '0.2.0' },
       },
+      jsonrpc: '2.0',
+      method: 'initialize',
     },
     {
       id: 2,
@@ -164,22 +164,22 @@ test('local destination confirmation accepts an override inside the workspace', 
     const responses = runMcpServer([
       {
         id: 1,
-        jsonrpc: '2.0',
-        method: 'initialize',
         params: {
           capabilities: {},
           protocolVersion: '2025-11-25',
           clientInfo: { name: 'thinkfeel-plugin-test', version: '0.2.0' },
         },
+        jsonrpc: '2.0',
+        method: 'initialize',
       },
       {
         id: 2,
-        jsonrpc: '2.0',
-        method: 'tools/call',
         params: {
           name: 'confirm_thinkfeel_api_key_local_destination',
           arguments: { workspacePath: workspace, targetPath: '.env.local' },
         },
+        jsonrpc: '2.0',
+        method: 'tools/call',
       },
       {
         jsonrpc: '2.0',
