@@ -382,15 +382,13 @@ function resolveOutputDir(rawDir) {
 function chmodBestEffort(target, mode) {
   try {
     fs.chmodSync(target, mode);
-  } catch {
-  }
+  } catch {}
 }
 
 function unlinkBestEffort(target) {
   try {
     fs.unlinkSync(target);
-  } catch {
-  }
+  } catch {}
 }
 
 const NOFOLLOW_OPEN_FLAG = fs.constants.O_NOFOLLOW ?? 0;
