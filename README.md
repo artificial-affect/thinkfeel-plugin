@@ -36,38 +36,11 @@ Run `/reload-plugins` after changing plugin manifests, MCP config, or other non-
 - Codex or Claude Code with plugin, skill, and MCP support.
 - A Playground account with access to create API keys.
 
-## What Is Included
-
-- `.codex-plugin/plugin.json` declares the Codex plugin metadata.
-- `.claude-plugin/plugin.json` declares the Claude Code plugin metadata.
-- `.agents/plugins/marketplace.json` publishes the Codex marketplace entry.
-- `.claude-plugin/marketplace.json` publishes the Claude Code marketplace entry.
-- `codex/mcp.json` and `claude/mcp.json` register the same local destination confirmation MCP server with host-specific path handling.
-- `mcp/server.mjs` provides an editable local destination confirmation form for API-key setup.
-- `skills/thinkfeel-playground-api-key/` defines the secure credential gate for Playground API-key setup.
-- `scripts/thinkfeel-playground-api-key.mjs` prepares a public encryption request and writes a decrypted key to a confirmed local env file without printing plaintext.
-- `tests/thinkfeel-playground-api-key.test.mjs` validates the helper, MCP tool, manifest wiring, and skill guardrails.
-
 ## API Key Setup Flow
 
 The plugin confirms a local env-file destination first, then runs its own helper login flow. It does not call the npm `thinkfeel` CLI or `thinkfeel login`. The helper opens Playground browser sign-in, asks the user to approve key creation, receives only encrypted ciphertext from the browser callback, decrypts locally, and writes `THINKFEEL_API_KEY` without printing plaintext. If the user provides a persona ID, it also writes `THINKFEEL_PERSONA_ID`.
 
-This shares the same Playground encrypted loopback login endpoint as `thinkfeel login`, but the local client is different: the plugin helper writes a project env file, while the standalone CLI saves a ThinkFeel profile.
-
 Use `OPENAI_API_KEY` only when configuring a project that explicitly uses the OpenAI-compatible `/api/v1/completions` endpoint or when the user asks for that env var.
-
-The lower-level helper still supports connector-style encrypted payloads with this shape:
-
-```json
-{
-  "encrypted_api_key": {
-    "version": 1,
-    "ciphertext": "base64url-rsa-oaep-ciphertext"
-  }
-}
-```
-
-The helper then decrypts locally and writes only to the user-confirmed env file.
 
 ## Direct Helper Usage
 
@@ -83,8 +56,6 @@ node scripts/thinkfeel-playground-api-key.mjs login \
 ```
 
 Use `--source codex` from Codex and `--source claude_code` from Claude Code.
-
-The helper opens Playground in a browser, completes normal sign-in, receives encrypted ciphertext on a loopback callback, decrypts it locally, and updates only the target env file. It never prints the plaintext key.
 
 ## Security Model
 
