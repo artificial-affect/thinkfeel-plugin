@@ -1,11 +1,8 @@
 import path from 'node:path';
 import readline from 'node:readline';
 
-const SERVER_NAME = 'ThinkFeel Plugin MCP';
 const DEFAULT_ENV_NAME = 'THINKFEEL_API_KEY';
 const TOOL_NAME = 'confirm_thinkfeel_api_key_local_destination';
-
-const ENV_NAME_PATTERN = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const JsonRpcError = { INVALID_PARAMS: -32602, METHOD_NOT_FOUND: -32601 };
 
 let nextRequestId = 1;
@@ -18,9 +15,7 @@ const sendError = (id, code, message) => send({ jsonrpc: '2.0', id, error: { cod
 function request(method, params) {
   const id = `server-${nextRequestId++}`;
   send({ jsonrpc: '2.0', id, method, params });
-  return new Promise((resolve, reject) => {
-    pendingRequests.set(id, { resolve, reject });
-  });
+  return new Promise((resolve, reject) => pendingRequests.set(id, { resolve, reject }));
 }
 
 function requireNonEmptyString(value, name) {
@@ -33,23 +28,18 @@ function resolveTarget(workspacePath, targetPath) {
   const target = path.resolve(workspace, requireNonEmptyString(targetPath, 'targetPath'));
 
   const relative = path.relative(workspace, target);
-  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+  if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative))
     throw new Error('The env file must be inside the selected workspace.');
-  }
   return { workspace, target };
 }
 
 async function handleToolCall(id, params) {
-  if (params?.name !== TOOL_NAME) {
-    sendError(id, JsonRpcError.INVALID_PARAMS, `Unknown tool: ${params?.name ?? ''}`);
-    return;
-  }
+  if (params?.name !== TOOL_NAME) return sendError(id, JsonRpcError.INVALID_PARAMS, `Unknown tool: ${params?.name ?? ''}`);
 
   const args = params.arguments ?? {};
   const envName = args.envName ?? DEFAULT_ENV_NAME;
-  if (typeof envName !== 'string' || !ENV_NAME_PATTERN.test(envName)) {
+  if (typeof envName !== 'string' || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(envName))
     throw new Error('envName must be a valid environment variable name.');
-  }
 
   const { workspace, target: recommendedTarget } = resolveTarget(args.workspacePath, args.targetPath);
   const elicitation = await request('elicitation/create', {
@@ -62,13 +52,11 @@ async function handleToolCall(id, params) {
     message: `Choose where ThinkFeel Plugin should save the new API key as ${envName}.`,
   });
 
-  if (elicitation?.action !== 'accept') {
-    sendResult(id, {
+  if (elicitation?.action !== 'accept')
+    return sendResult(id, {
       structuredContent: { status: 'not_approved', action: elicitation?.action ?? 'cancel' },
       content: [{ type: 'text', text: 'The local API key destination was not approved. Do not create or write a key.' }],
     });
-    return;
-  }
 
   const { target } = resolveTarget(workspace, elicitation.content?.targetPath);
   sendResult(id, {
@@ -85,21 +73,19 @@ async function handleToolCall(id, params) {
 async function handleRequest(message) {
   const { id, method, params } = message;
 
-  if (method === 'initialize') {
-    sendResult(id, {
+  if (method === 'initialize')
+    return sendResult(id, {
       capabilities: { tools: {} },
-      serverInfo: { version: '0.2.0', name: SERVER_NAME },
+      serverInfo: { version: '0.2.0', name: 'ThinkFeel Plugin MCP' },
       protocolVersion: params?.protocolVersion ?? '2025-11-25',
       instructions:
         'Use confirm_thinkfeel_api_key_local_destination before running the ThinkFeel helper login flow. It asks the developer to confirm or edit the local env-file destination before a secret is created or written.',
     });
-    return;
-  }
 
   if (method === 'ping') return sendResult(id, {});
 
-  if (method === 'tools/list') {
-    sendResult(id, {
+  if (method === 'tools/list')
+    return sendResult(id, {
       tools: [
         {
           description:
@@ -129,8 +115,6 @@ async function handleRequest(message) {
         },
       ],
     });
-    return;
-  }
 
   if (method === 'tools/call') {
     try {
@@ -158,13 +142,10 @@ lines.on('line', line => {
 
   if (message.method === undefined && message.id !== undefined) {
     const pending = pendingRequests.get(message.id);
-
-    if (pending !== undefined) {
-      pendingRequests.delete(message.id);
-
-      if (message.error !== undefined) pending.reject(new Error(message.error.message ?? 'MCP request failed.'));
-      else pending.resolve(message.result);
-    }
+    if (pending === undefined) return;
+    pendingRequests.delete(message.id);
+    if (message.error !== undefined) pending.reject(new Error(message.error.message ?? 'MCP request failed.'));
+    else pending.resolve(message.result);
     return;
   }
 
