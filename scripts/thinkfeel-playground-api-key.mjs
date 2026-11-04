@@ -11,7 +11,7 @@ const { subtle } = webcrypto;
 
 const ENCRYPTED_API_KEY_VERSION = 1;
 const LOGIN_SOURCE_VALUES = new Set(['codex', 'claude_code']);
-const LOGIN_SOURCE_DISPLAY_NAMES = { claude_code: 'Claude Code', codex: 'Codex' };
+const LOGIN_SOURCE_DISPLAY_NAMES = { codex: 'Codex', claude_code: 'Claude Code' };
 
 const OPTIONS = new Set([
   'ciphertext',
@@ -463,7 +463,7 @@ async function generateRecipientKeyPair() {
     ['encrypt', 'decrypt']
   );
   const { n, e } = await subtle.exportKey('jwk', publicKey);
-  return { privateKey, publicJwk: { kty: 'RSA', n, e } };
+  return { privateKey, publicJwk: { n, e, kty: 'RSA' } };
 }
 
 async function prepare(args) {

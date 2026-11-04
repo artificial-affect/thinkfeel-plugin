@@ -1,8 +1,6 @@
 # AGENTS.md
 
-Assume nothing.
-Be extremely terse.
-Seek least-unintended-complexity-per-solution/LOC.
+Assume nothing. Be extremely terse. Seek least-unintended-complexity-per-solution/LOC.
 
 ## Absolute Laws
 
