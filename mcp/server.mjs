@@ -9,13 +9,13 @@ let nextRequestId = 1;
 const pendingRequests = new Map();
 
 const send = message => process.stdout.write(`${JSON.stringify(message)}\n`);
-const sendResult = (id, result) => send({ jsonrpc: '2.0', id, result });
-const sendError = (id, code, message) => send({ jsonrpc: '2.0', id, error: { code, message } });
+const sendResult = (id, result) => send({ id, result, jsonrpc: '2.0' });
+const sendError = (id, code, message) => send({ id, jsonrpc: '2.0', error: { code, message } });
 
 function request(method, params) {
   const id = `server-${nextRequestId++}`;
-  send({ jsonrpc: '2.0', id, method, params });
-  return new Promise((resolve, reject) => pendingRequests.set(id, { resolve, reject }));
+  send({ id, method, params, jsonrpc: '2.0' });
+  return new Promise((resolve, reject) => pendingRequests.set(id, { reject, resolve }));
 }
 
 function requireNonEmptyString(value, name) {
@@ -30,7 +30,7 @@ function resolveTarget(workspacePath, targetPath) {
   const relative = path.relative(workspace, target);
   if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative))
     throw new Error('The env file must be inside the selected workspace.');
-  return { workspace, target };
+  return { target, workspace };
 }
 
 async function handleToolCall(id, params) {
@@ -44,12 +44,12 @@ async function handleToolCall(id, params) {
   const { workspace, target: recommendedTarget } = resolveTarget(args.workspacePath, args.targetPath);
   const elicitation = await request('elicitation/create', {
     mode: 'form',
+    message: `Choose where ThinkFeel Plugin should save the new API key as ${envName}.`,
     requestedSchema: {
       type: 'object',
       required: ['targetPath'],
       properties: { targetPath: { minLength: 1, type: 'string', title: 'Save location', default: recommendedTarget } },
     },
-    message: `Choose where ThinkFeel Plugin should save the new API key as ${envName}.`,
   });
 
   if (elicitation?.action !== 'accept')
@@ -60,13 +60,13 @@ async function handleToolCall(id, params) {
 
   const { target } = resolveTarget(workspace, elicitation.content?.targetPath);
   sendResult(id, {
+    structuredContent: { envName, status: 'approved', targetPath: target, workspacePath: workspace },
     content: [
       {
         type: 'text',
         text: `The developer approved ${target} for ${envName}. Continue with secure key creation and write only to that env file.`,
       },
     ],
-    structuredContent: { envName, status: 'approved', targetPath: target, workspacePath: workspace },
   });
 }
 
@@ -88,15 +88,15 @@ async function handleRequest(message) {
     return sendResult(id, {
       tools: [
         {
+          name: TOOL_NAME,
+          title: 'Confirm Playground API Key Local Destination',
+          annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false, destructiveHint: false },
           description:
             'Ask the developer to confirm or edit the local env-file destination for a new Playground API key. Call this before running the helper login flow, and proceed only when it returns approved.',
           inputSchema: {
+            type: 'object',
+            required: ['workspacePath', 'targetPath'],
             properties: {
-              envName: {
-                type: 'string',
-                default: DEFAULT_ENV_NAME,
-                description: 'Environment variable name to create or update. Defaults to THINKFEEL_API_KEY.',
-              },
               targetPath: {
                 type: 'string',
                 description: 'Recommended env-file path inside the workspace, such as .env.local.',
@@ -105,13 +105,13 @@ async function handleRequest(message) {
                 type: 'string',
                 description: 'Absolute workspace root used to confine the local env-file write.',
               },
+              envName: {
+                type: 'string',
+                default: DEFAULT_ENV_NAME,
+                description: 'Environment variable name to create or update. Defaults to THINKFEEL_API_KEY.',
+              },
             },
-            type: 'object',
-            required: ['workspacePath', 'targetPath'],
           },
-          name: TOOL_NAME,
-          title: 'Confirm Playground API Key Local Destination',
-          annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false, destructiveHint: false },
         },
       ],
     });

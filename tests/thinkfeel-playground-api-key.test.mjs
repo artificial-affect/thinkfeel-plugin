@@ -53,7 +53,7 @@ function runMcpServer(requests) {
 }
 
 function removeTempDir(dir) {
-  fs.rmSync(dir, { recursive: true, force: true });
+  fs.rmSync(dir, { force: true, recursive: true });
 }
 
 function base64url(bytes) {
@@ -129,20 +129,15 @@ test('plugin registers the local destination confirmation MCP tool', () => {
   const responses = runMcpServer([
     {
       id: 1,
+      jsonrpc: '2.0',
+      method: 'initialize',
       params: {
         capabilities: {},
         protocolVersion: '2025-11-25',
-        clientInfo: { name: 'thinkfeel-plugin-test', version: '0.2.0' },
+        clientInfo: { version: '0.2.0', name: 'thinkfeel-plugin-test' },
       },
-      jsonrpc: '2.0',
-      method: 'initialize',
     },
-    {
-      id: 2,
-      params: {},
-      jsonrpc: '2.0',
-      method: 'tools/list',
-    },
+    { id: 2, params: {}, jsonrpc: '2.0', method: 'tools/list' },
   ]);
 
   assert.equal(pluginManifest.name, 'thinkfeel-plugin');
@@ -164,28 +159,24 @@ test('local destination confirmation accepts an override inside the workspace', 
     const responses = runMcpServer([
       {
         id: 1,
+        jsonrpc: '2.0',
+        method: 'initialize',
         params: {
           capabilities: {},
           protocolVersion: '2025-11-25',
-          clientInfo: { name: 'thinkfeel-plugin-test', version: '0.2.0' },
+          clientInfo: { version: '0.2.0', name: 'thinkfeel-plugin-test' },
         },
-        jsonrpc: '2.0',
-        method: 'initialize',
       },
       {
         id: 2,
+        jsonrpc: '2.0',
+        method: 'tools/call',
         params: {
           name: 'confirm_thinkfeel_api_key_local_destination',
           arguments: { workspacePath: workspace, targetPath: '.env.local' },
         },
-        jsonrpc: '2.0',
-        method: 'tools/call',
       },
-      {
-        jsonrpc: '2.0',
-        id: 'server-1',
-        result: { action: 'accept', content: { targetPath: '.env.test' } },
-      },
+      { jsonrpc: '2.0', id: 'server-1', result: { action: 'accept', content: { targetPath: '.env.test' } } },
     ]);
 
     const result = responses.find(response => response.id === 2);
