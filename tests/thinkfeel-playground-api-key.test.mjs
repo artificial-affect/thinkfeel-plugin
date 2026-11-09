@@ -213,7 +213,8 @@ test('skill documents credential gates and helper login flow', () => {
   assert.match(skill, /THINKFEEL_PERSONA_ID/);
   assert.match(skill, /OPENAI_API_KEY/);
   assert.match(helper, /LOGIN_SOURCE_VALUES = new Set\(\['codex', 'claude_code'\]\)/);
-  assert.match(helper, /LOGIN_SOURCE_DISPLAY_NAMES = \{ claude_code: 'Claude Code', codex: 'Codex' \}/);
+  assert.match(helper, /LOGIN_SOURCE_DISPLAY_NAMES = \{[^}]*claude_code: 'Claude Code'/);
+  assert.match(helper, /LOGIN_SOURCE_DISPLAY_NAMES = \{[^}]*codex: 'Codex'/);
   assert.match(helper, /loginUrl\.searchParams\.set\('source', source\)/);
   assert.match(helper, /form\.get\('error'\)/);
   assert.match(helper, /function localSuccessPage/);
