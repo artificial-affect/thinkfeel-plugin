@@ -76,8 +76,8 @@ async function handleRequest(message) {
   if (method === 'initialize')
     return sendResult(id, {
       capabilities: { tools: {} },
-      serverInfo: { version: '0.2.0', name: 'ThinkFeel Plugin MCP' },
       protocolVersion: params?.protocolVersion ?? '2025-11-25',
+      serverInfo: { version: '0.2.0', name: 'ThinkFeel Plugin MCP' },
       instructions:
         'Use confirm_thinkfeel_api_key_local_destination before running the ThinkFeel helper login flow. It asks the developer to confirm or edit the local env-file destination before a secret is created or written.',
     });

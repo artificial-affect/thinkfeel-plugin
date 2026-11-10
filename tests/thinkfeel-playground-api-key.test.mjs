@@ -56,9 +56,7 @@ function removeTempDir(dir) {
   fs.rmSync(dir, { force: true, recursive: true });
 }
 
-function base64url(bytes) {
-  return Buffer.from(bytes).toString('base64url');
-}
+const base64url = bytes => Buffer.from(bytes).toString('base64url');
 
 async function encryptWithPublicJwk(publicJwk, plaintext) {
   const publicKey = await subtle.importKey('jwk', publicJwk, { hash: 'SHA-256', name: 'RSA-OAEP' }, false, ['encrypt']);
