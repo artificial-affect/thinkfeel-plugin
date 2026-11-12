@@ -6,11 +6,9 @@ import { webcrypto } from 'node:crypto';
 import assert from 'node:assert/strict';
 import { fileURLToPath } from 'node:url';
 import { spawnSync, execFileSync } from 'node:child_process';
-
 const { subtle } = webcrypto;
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.resolve(__dirname, '../scripts/thinkfeel-playground-api-key.mjs');
-
 const SKILL = path.resolve(__dirname, '../skills/thinkfeel-playground-api-key/SKILL.md');
 const CURVE_LABS_LOGO = path.resolve(__dirname, '../assets/curve-labs-logo.png');
 const CODEX_PLUGIN_MANIFEST = path.resolve(__dirname, '../.codex-plugin/plugin.json');
@@ -18,7 +16,6 @@ const CLAUDE_PLUGIN_MANIFEST = path.resolve(__dirname, '../.claude-plugin/plugin
 const CLAUDE_MARKETPLACE = path.resolve(__dirname, '../.claude-plugin/marketplace.json');
 const CODEX_MCP_MANIFEST = path.resolve(__dirname, '../codex/mcp.json');
 const CLAUDE_MCP_MANIFEST = path.resolve(__dirname, '../claude/mcp.json');
-
 const MCP_SERVER = path.resolve(__dirname, '../mcp/server.mjs');
 const TEST_API_KEY = ['tf', 'test', 'placeholder', 'value'].join('_');
 const TEST_PERSONA_ID = 'persona-00000000-0000-0000-0000-000000000001';
@@ -37,6 +34,7 @@ function runScriptRaw(args) {
 
 function runMcpServer(requests) {
   const input = requests.map(request => JSON.stringify(request)).join('\n') + '\n';
+
   const result = spawnSync(process.execPath, [MCP_SERVER], {
     input,
     timeout: 5_000,
@@ -46,6 +44,7 @@ function runMcpServer(requests) {
 
   assert.equal(result.status, 0, result.stderr);
   assert.equal(result.stderr, '');
+
   return result.stdout
     .split(/\r?\n/u)
     .filter(line => line.trim().length > 0)
@@ -66,11 +65,11 @@ async function encryptWithPublicJwk(publicJwk, plaintext) {
 
 test('prepare writes private key locally and emits a public connector request', () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkfeel-playground-helper-test-'));
+
   try {
     const output = JSON.parse(runScript(['prepare', '--name', 'Unit Test', '--dir', dir]));
     const request = JSON.parse(fs.readFileSync(output.request_path, 'utf8'));
     const privateKey = JSON.parse(fs.readFileSync(output.private_key_path, 'utf8'));
-
     assert.equal(request.name, 'Unit Test');
     assert.deepEqual(Object.keys(request.recipient_public_key_jwk).sort(), ['e', 'kty', 'n']);
     assert.equal(request.recipient_public_key_jwk.kty, 'RSA');
@@ -85,9 +84,11 @@ test('prepare writes private key locally and emits a public connector request', 
 test('decrypt writes only safe metadata to stdout', async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkfeel-playground-helper-test-'));
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkfeel-playground-workspace-'));
+
   try {
     const output = JSON.parse(runScript(['prepare', '--name', 'Unit Test', '--dir', dir]));
     const ciphertext = await encryptWithPublicJwk(output.recipient_public_key_jwk, TEST_API_KEY);
+
     const result = JSON.parse(
       runScript([
         'decrypt',
@@ -106,10 +107,8 @@ test('decrypt writes only safe metadata to stdout', async () => {
 
     const envPath = path.join(workspace, '.env.local');
     assert.equal(result.target_path, fs.realpathSync(envPath));
-
     assert.equal(result.env_name, 'THINKFEEL_API_KEY');
     assert.equal(result.persona_env_name, 'THINKFEEL_PERSONA_ID');
-
     assert.equal(result.wrote_plaintext_to_stdout, false);
     assert.doesNotMatch(JSON.stringify(result), new RegExp(TEST_API_KEY));
     assert.equal(fs.readFileSync(envPath, 'utf8').includes(`THINKFEEL_API_KEY=${TEST_API_KEY}`), true);
@@ -124,27 +123,31 @@ test('plugin registers the local destination confirmation MCP tool', () => {
   const pluginManifest = JSON.parse(fs.readFileSync(CODEX_PLUGIN_MANIFEST, 'utf8'));
   const codexMcpManifest = JSON.parse(fs.readFileSync(CODEX_MCP_MANIFEST, 'utf8'));
   const claudeMcpManifest = JSON.parse(fs.readFileSync(CLAUDE_MCP_MANIFEST, 'utf8'));
+
   const responses = runMcpServer([
     {
       id: 1,
-      jsonrpc: '2.0',
       method: 'initialize',
       params: {
+        clientInfo: { name: 'thinkfeel-plugin-test', version: '0.2.0' },
         capabilities: {},
         protocolVersion: '2025-11-25',
-        clientInfo: { version: '0.2.0', name: 'thinkfeel-plugin-test' },
       },
+      jsonrpc: '2.0',
     },
-    { id: 2, params: {}, jsonrpc: '2.0', method: 'tools/list' },
+    { id: 2, method: 'tools/list', params: {}, jsonrpc: '2.0' },
   ]);
 
   assert.equal(pluginManifest.name, 'thinkfeel-plugin');
   assert.equal(pluginManifest.mcpServers, './codex/mcp.json');
   assert.deepEqual(codexMcpManifest.mcpServers['thinkfeel-api-key-local-confirmation'].args, ['./mcp/server.mjs']);
+
   assert.deepEqual(claudeMcpManifest.mcpServers['thinkfeel-api-key-local-confirmation'].args, [
     '${CLAUDE_PLUGIN_ROOT}/mcp/server.mjs',
   ]);
+
   assert.equal(responses[0].result.serverInfo.name, 'ThinkFeel Plugin MCP');
+
   assert.deepEqual(
     responses[1].result.tools.map(tool => tool.name),
     ['confirm_thinkfeel_api_key_local_destination']
@@ -153,26 +156,27 @@ test('plugin registers the local destination confirmation MCP tool', () => {
 
 test('local destination confirmation accepts an override inside the workspace', () => {
   const workspace = fs.mkdtempSync(path.join(os.tmpdir(), 'thinkfeel-playground-mcp-test-'));
+
   try {
     const responses = runMcpServer([
       {
         id: 1,
-        jsonrpc: '2.0',
         method: 'initialize',
         params: {
+          clientInfo: { name: 'thinkfeel-plugin-test', version: '0.2.0' },
           capabilities: {},
           protocolVersion: '2025-11-25',
-          clientInfo: { version: '0.2.0', name: 'thinkfeel-plugin-test' },
         },
+        jsonrpc: '2.0',
       },
       {
         id: 2,
-        jsonrpc: '2.0',
         method: 'tools/call',
         params: {
           name: 'confirm_thinkfeel_api_key_local_destination',
           arguments: { workspacePath: workspace, targetPath: '.env.local' },
         },
+        jsonrpc: '2.0',
       },
       { jsonrpc: '2.0', id: 'server-1', result: { action: 'accept', content: { targetPath: '.env.test' } } },
     ]);
@@ -188,7 +192,6 @@ test('local destination confirmation accepts an override inside the workspace', 
 
 test('login rejects unknown agent source values before starting setup', () => {
   const result = runScriptRaw(['login', '--target', '.env.local', '--source', 'unknown_agent']);
-
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Invalid --source\. Use codex or claude_code\./);
 });
@@ -198,7 +201,6 @@ test('skill documents credential gates and helper login flow', () => {
   const helper = fs.readFileSync(SCRIPT, 'utf8');
   const claudePluginManifest = JSON.parse(fs.readFileSync(CLAUDE_PLUGIN_MANIFEST, 'utf8'));
   const claudeMarketplace = JSON.parse(fs.readFileSync(CLAUDE_MARKETPLACE, 'utf8'));
-
   assert.equal(claudePluginManifest.name, 'thinkfeel-plugin');
   assert.equal(claudePluginManifest.mcpServers, './claude/mcp.json');
   assert.equal(claudeMarketplace.plugins[0].name, 'thinkfeel-plugin');
