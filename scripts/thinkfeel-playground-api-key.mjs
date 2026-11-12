@@ -6,9 +6,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { webcrypto, randomUUID } from 'node:crypto';
-
 const { subtle } = webcrypto;
-
 const ENCRYPTED_API_KEY_VERSION = 1;
 const LOGIN_SOURCE_VALUES = new Set(['codex', 'claude_code']);
 const LOGIN_SOURCE_DISPLAY_NAMES = { codex: 'Codex', claude_code: 'Claude Code' };
@@ -46,6 +44,7 @@ function fail(message) {
 
 function parseArgs(argv) {
   const args = {};
+
   for (let index = 0; index < argv.length; index += 1) {
     if (!argv[index].startsWith('--')) continue;
     const key = argv[index].slice(2);
@@ -54,6 +53,7 @@ function parseArgs(argv) {
     if (value == null || (value.startsWith('--') && key !== 'ciphertext')) fail(`Missing value for --${key}.`);
     args[key] = value;
   }
+
   return args;
 }
 
@@ -356,11 +356,13 @@ function realpathSyncOrFail(filePath, label) {
 
 function statDirectoryOrFail(filePath, label) {
   let stat;
+
   try {
     stat = fs.statSync(filePath);
   } catch (error) {
     fail(`Failed to access ${label}: ${error.message}`);
   }
+
   if (!stat.isDirectory()) fail(`${label} is not a directory: ${filePath}`);
 }
 
@@ -368,13 +370,12 @@ function resolveSafeTarget(targetPath, workspacePath) {
   const workspace = path.resolve(workspacePath);
   statDirectoryOrFail(workspace, 'Workspace');
   const workspaceRealPath = realpathSyncOrFail(workspace, 'workspace');
-
   const resolvedTarget = path.resolve(workspace, targetPath);
   const parentPath = path.dirname(resolvedTarget);
   statDirectoryOrFail(parentPath, 'Target parent directory');
   const parentRealPath = realpathSyncOrFail(parentPath, 'target parent directory');
-
   const relative = path.relative(workspaceRealPath, parentRealPath);
+
   if (relative === '..' || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative))
     fail(`Target env file must be inside the workspace. Workspace: ${workspaceRealPath}. Target: ${resolvedTarget}`);
 
@@ -383,12 +384,14 @@ function resolveSafeTarget(targetPath, workspacePath) {
 
 function lstatTarget(filePath) {
   let stat;
+
   try {
     stat = fs.lstatSync(filePath);
   } catch (error) {
     if (error.code === 'ENOENT') return null;
     fail(`Failed to inspect target env file: ${error.message}`);
   }
+
   if (stat.isSymbolicLink()) fail(`Refusing to write API key through symlink target: ${filePath}`);
   if (!stat.isFile()) fail(`Refusing to write API key to non-file target: ${filePath}`);
   if (stat.nlink > 1) fail(`Refusing to write API key to hard-linked target: ${filePath}`);
@@ -409,6 +412,7 @@ function readFileNoFollow(filePath) {
   const fd = openNoFollow(filePath, fs.constants.O_RDONLY, undefined, 'read');
   let contents = '';
   let failure = null;
+
   try {
     if (!fs.fstatSync(fd).isFile()) failure = `Refusing to read non-file target env file: ${filePath}`;
     else contents = fs.readFileSync(fd, 'utf8');
@@ -417,19 +421,23 @@ function readFileNoFollow(filePath) {
   } finally {
     fs.closeSync(fd);
   }
+
   if (failure) fail(failure);
   return contents;
 }
 
 function writeFileNoFollow(filePath, contents) {
   const tempPath = path.join(path.dirname(filePath), `.${path.basename(filePath)}.${process.pid}.${randomUUID()}.tmp`);
+
   const fd = openNoFollow(
     tempPath,
     fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL,
     0o600,
     'create temporary'
   );
+
   let failure = null;
+
   try {
     if (!fs.fstatSync(fd).isFile()) failure = `Refusing to write API key to non-file temporary target: ${tempPath}`;
     else fs.writeFileSync(fd, contents, { encoding: 'utf8' });
@@ -438,16 +446,19 @@ function writeFileNoFollow(filePath, contents) {
   } finally {
     fs.closeSync(fd);
   }
+
   if (failure) {
     unlinkBestEffort(tempPath);
     fail(failure);
   }
+
   try {
     fs.renameSync(tempPath, filePath);
   } catch (error) {
     unlinkBestEffort(tempPath);
     fail(`Failed to replace target env file safely: ${error.message}`);
   }
+
   chmodBestEffort(filePath, 0o600);
 }
 
@@ -462,6 +473,7 @@ async function generateRecipientKeyPair() {
     true,
     ['encrypt', 'decrypt']
   );
+
   const { n, e } = await subtle.exportKey('jwk', publicKey);
   return { privateKey, publicJwk: { n, e, kty: 'RSA' } };
 }
@@ -472,7 +484,6 @@ async function prepare(args) {
   const privateKeyPath = path.join(outputDir, 'recipient-private-key.jwk.json');
   const requestPath = path.join(outputDir, 'connector-request.json');
   const { privateKey, publicJwk } = await generateRecipientKeyPair();
-
   writeJson(privateKeyPath, await subtle.exportKey('jwk', privateKey));
   writeJson(requestPath, { name, recipient_public_key_jwk: publicJwk });
   printJson({ name, request_path: requestPath, private_key_path: privateKeyPath, recipient_public_key_jwk: publicJwk });
@@ -491,8 +502,10 @@ function encryptedPayloadFromArgs(args) {
 
   if (typeof args['encrypted-result'] === 'string') {
     const raw = readJson(path.resolve(args['encrypted-result']), 'encrypted result JSON');
+
     const payload =
       raw?.encrypted_api_key ?? raw?.structuredContent?.encrypted_api_key ?? raw?.structured_content?.encrypted_api_key;
+
     if (payload && typeof payload === 'object') return payload;
   }
 
@@ -502,6 +515,7 @@ function encryptedPayloadFromArgs(args) {
 async function decryptPayload(privateKey, encryptedPayload) {
   if (encryptedPayload.version !== ENCRYPTED_API_KEY_VERSION)
     fail(`Unsupported encrypted API key version: ${encryptedPayload.version}`);
+
   const { ciphertext } = encryptedPayload;
   if (typeof ciphertext !== 'string') fail('Encrypted API key ciphertext is missing.');
   if (!/^[A-Za-z0-9_-]+$/.test(ciphertext) || ciphertext.length % 4 === 1) fail('Encrypted ciphertext must be base64url.');
@@ -530,6 +544,7 @@ function readRequestBody(request) {
 
     request.on('data', chunk => {
       body += chunk;
+
       if (body.length > 100_000) {
         reject(new Error('Login callback payload is too large.'));
         request.destroy();
@@ -544,6 +559,7 @@ function readRequestBody(request) {
 function startLoginCallbackServer(state) {
   let resolveCallback;
   let rejectCallback;
+
   const callbackPromise = new Promise((resolve, reject) => {
     resolveCallback = resolve;
     rejectCallback = reject;
@@ -560,13 +576,10 @@ function startLoginCallbackServer(state) {
 
         const form = new URLSearchParams(await readRequestBody(request));
         if (form.get('state') !== state) throw new Error('Invalid login callback state.');
-
         const loginError = form.get('error');
         if (loginError) throw new Error(loginError);
-
         const encryptedApiKeyRaw = form.get('encrypted_api_key');
         if (!encryptedApiKeyRaw) throw new Error('Missing encrypted API key.');
-
         response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
         response.end(localSuccessPage());
         server.close();
@@ -588,10 +601,12 @@ function startLoginCallbackServer(state) {
     );
 
     server.on('close', () => clearTimeout(timeout));
+
     server.on('error', error => {
       reject(error);
       rejectCallback(error);
     });
+
     server.listen(0, '127.0.0.1', () =>
       resolve({ callbackPromise, redirectUri: `http://127.0.0.1:${server.address().port}/thinkfeel/callback` })
     );
@@ -604,8 +619,8 @@ function upsertEnvValue(targetPath, envName, value, workspacePath) {
   const original = existed ? readFileNoFollow(resolvedTarget) : '';
   const newline = original.includes('\r\n') ? '\r\n' : '\n';
   const envPattern = new RegExp(`^(export\\s+)?${envName}=`);
-
   let updatedExisting = false;
+
   const updatedLines = (original.length > 0 ? original.split(/\r?\n/) : []).map(line => {
     const match = line.match(envPattern);
     if (!match) return line;
@@ -614,6 +629,7 @@ function upsertEnvValue(targetPath, envName, value, workspacePath) {
   });
 
   let nextContent;
+
   if (updatedExisting) nextContent = updatedLines.join(newline);
   else if (original.length === 0) nextContent = `${envName}=${value}${newline}`;
   else if (original.endsWith('\n')) nextContent = `${original}${envName}=${value}${newline}`;
@@ -634,13 +650,13 @@ function getPersonaId(args) {
 function writeEnv(args, apiKey, personaId, extra) {
   const envName = args['env-name']?.trim() || 'THINKFEEL_API_KEY';
   if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(envName)) fail(`Invalid env var name: ${envName}`);
+
   if (!/^(sk-[A-Za-z0-9_-]+|tf[_-][A-Za-z0-9_-]+)$/.test(apiKey))
     fail('Decrypted API key is not a safe ThinkFeel/OpenAI API key literal.');
 
   const workspacePath = args.workspace?.trim() || process.cwd();
   const writeResult = upsertEnvValue(args.target, envName, apiKey, workspacePath);
   const personaWriteResult = personaId && upsertEnvValue(args.target, 'THINKFEEL_PERSONA_ID', personaId, workspacePath);
-
   printJson({
     ...writeResult,
     persona_env_name: personaWriteResult?.env_name,
@@ -653,9 +669,9 @@ function writeEnv(args, apiKey, personaId, extra) {
 async function decrypt(args) {
   if (typeof args['private-key'] !== 'string') fail('Missing --private-key.');
   if (typeof args.target !== 'string') fail('Missing --target.');
-
   const personaId = getPersonaId(args);
   const encryptedPayload = encryptedPayloadFromArgs(args);
+
   const privateKey = await subtle.importKey(
     'jwk',
     readJson(path.resolve(args['private-key']), 'private key JWK'),
@@ -673,7 +689,6 @@ async function login(args) {
   const name = args.name?.trim() || LOGIN_SOURCE_DISPLAY_NAMES[source];
   const personaId = getPersonaId(args);
   const state = randomUUID();
-
   const { privateKey, publicJwk } = await generateRecipientKeyPair();
   const { callbackPromise, redirectUri } = await startLoginCallbackServer(state);
 
@@ -681,26 +696,23 @@ async function login(args) {
     '/api/thinkfeel/cli/login',
     (args['base-url']?.trim() || 'https://playground.curvelabs.org').replace(/\/+$/, '')
   );
+
   loginUrl.searchParams.set('state', state);
   loginUrl.searchParams.set('name', name);
   loginUrl.searchParams.set('source', source);
   loginUrl.searchParams.set('redirect_uri', redirectUri);
   loginUrl.searchParams.set('recipient_public_key_jwk', Buffer.from(JSON.stringify(publicJwk), 'utf8').toString('base64url'));
-
   openBrowser(loginUrl.toString());
-
   writeEnv(args, await decryptPayload(privateKey, await callbackPromise), personaId, { source });
 }
 
 async function main() {
   const [command, ...rest] = process.argv.slice(2);
   if (command == null || command === '--help' || command === '-h') return process.stdout.write(`${USAGE}\n`);
-
   const args = parseArgs(rest);
   if (command === 'prepare') return prepare(args);
   if (command === 'login') return login(args);
   if (command === 'decrypt') return decrypt(args);
-
   fail(`Unknown command: ${command}\n${USAGE}`);
 }
 
